@@ -6,18 +6,32 @@ import pdfRoutes from "./routes/pdf.routes.js";
 const app = express();
 
 // Frontend origin for CORS (set this in your .env or Vercel environment)
-const FRONTEND_URL =
-  process.env.FRONTEND_URL || "https://pagelypdf.vercel.app/";
+const FRONTEND_URL = process.env.FRONTEND_URL || "https://pagelypdf.vercel.app";
 
 // CORS configuration - allow all origins for development
 // The cors() middleware automatically handles OPTIONS preflight requests
 app.use(
   cors({
-    origin: FRONTEND_URL,
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true); // allow mobile apps / curl
+
+      const allowedOrigins = ["https://pagelypdf.vercel.app", FRONTEND_URL];
+
+      // Use the exact origin string (not `true`) to avoid trailing-slash mismatch
+      if (allowedOrigins.includes(origin)) {
+        callback(null, origin);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "Content-Disposition"],
-    exposedHeaders: ["Content-Disposition", "Content-Type"],
-    credentials: false,
+    exposedHeaders: [
+      "Content-Disposition",
+      "Content-Type",
+      "X-Original-Size",
+      "X-Compressed-Size",
+    ],
   }),
 );
 
