@@ -4,54 +4,66 @@ import { spawn } from "child_process";
 import { v4 as uuidv4 } from "uuid";
 
 export const convertPdfToWord = async (pdfBuffer, outputPath) => {
-  try {
-    // Create a temporary PDF file
-    const tempDir = path.join(process.cwd(), "uploads", "temp");
-    if (!fs.existsSync(tempDir)) {
-      fs.mkdirSync(tempDir, { recursive: true });
-    }
-    const tempPdfPath = path.join(tempDir, `${uuidv4()}.pdf`);
-    fs.writeFileSync(tempPdfPath, pdfBuffer);
+  const tempDir = path.join(process.cwd(), "uploads", "temp");
+  if (!fs.existsSync(tempDir)) {
+    fs.mkdirSync(tempDir, { recursive: true });
+  }
 
-    // Call the Python script
-    const pythonBin = process.env.PYTHON_BIN || "python3";
-    const pythonProcess = spawn(
-      pythonBin,
-      ["pdf2docx_convert.py", tempPdfPath, outputPath],
-      {
-        cwd: process.cwd(),
-      },
+  const tempPdfPath = path.join(tempDir, `${uuidv4()}.pdf`);
+  fs.writeFileSync(tempPdfPath, pdfBuffer);
+
+  try {
+    // Use LibreOffice to convert PDF to DOCX (much more reliable than pdf2docx)
+    const loProcess = spawn(
+      "libreoffice",
+      [
+        "--headless",
+        "--infilter=writer_pdf_import",
+        "--convert-to",
+        "docx",
+        "--outdir",
+        tempDir,
+        tempPdfPath,
+      ],
+      { cwd: process.cwd() },
     );
 
     let stdout = "";
     let stderr = "";
 
-    pythonProcess.stdout.on("data", (data) => {
+    loProcess.stdout.on("data", (data) => {
       stdout += data.toString();
     });
 
-    pythonProcess.stderr.on("data", (data) => {
+    loProcess.stderr.on("data", (data) => {
       stderr += data.toString();
     });
 
-    return new Promise((resolve, reject) => {
+    const convertedTempPath = await new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
-        pythonProcess.kill("SIGKILL");
-        if (fs.existsSync(tempPdfPath)) fs.unlinkSync(tempPdfPath);
+        loProcess.kill("SIGKILL");
         reject(new Error("PDF to Word conversion timed out"));
       }, 120000); // 2 minutes
 
-      pythonProcess.on("close", (code) => {
+      loProcess.on("close", (code) => {
         clearTimeout(timeout);
-        // Clean up temp file
-        if (fs.existsSync(tempPdfPath)) {
-          fs.unlinkSync(tempPdfPath);
-        }
 
         if (code === 0) {
-          resolve(outputPath);
+          // LibreOffice outputs the file in the same dir with .docx extension
+          const baseName = path.basename(tempPdfPath, ".pdf");
+          const convertedPath = path.join(tempDir, `${baseName}.docx`);
+
+          if (fs.existsSync(convertedPath)) {
+            resolve(convertedPath);
+          } else {
+            reject(
+              new Error(
+                "LibreOffice conversion completed but output file not found",
+              ),
+            );
+          }
         } else {
-          console.error("Python script failed:");
+          console.error("LibreOffice conversion failed:");
           console.error("STDOUT:", stdout);
           console.error("STDERR:", stderr);
           reject(
@@ -62,16 +74,19 @@ export const convertPdfToWord = async (pdfBuffer, outputPath) => {
         }
       });
 
-      pythonProcess.on("error", (err) => {
+      loProcess.on("error", (err) => {
         clearTimeout(timeout);
-        // Clean up temp file
-        if (fs.existsSync(tempPdfPath)) {
-          fs.unlinkSync(tempPdfPath);
-        }
         reject(new Error("PDF to Word conversion failed: " + err.message));
       });
     });
-  } catch (err) {
-    throw new Error("PDF to Word conversion failed: " + err.message);
+
+    // Move the converted file to the desired output path
+    fs.renameSync(convertedTempPath, outputPath);
+    return outputPath;
+  } finally {
+    // Always clean up temp PDF
+    if (fs.existsSync(tempPdfPath)) {
+      fs.unlinkSync(tempPdfPath);
+    }
   }
 };
