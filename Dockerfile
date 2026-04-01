@@ -4,6 +4,7 @@ FROM node:20-bullseye-slim
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ghostscript \
     libreoffice \
+  default-jre \
     python3 \
     python3-pip \
     poppler-utils \
@@ -14,6 +15,10 @@ WORKDIR /app
 # Copy and install Node deps
 COPY package*.json ./
 RUN npm ci --production
+
+# Install Python requirements (if present)
+COPY requirements.txt ./
+RUN if [ -f requirements.txt ]; then pip3 install --no-cache-dir -r requirements.txt; fi
 
 # If you have Python requirements:
 # COPY requirements.txt ./

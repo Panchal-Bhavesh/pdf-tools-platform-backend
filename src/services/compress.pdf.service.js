@@ -1,4 +1,4 @@
-import { exec } from "child_process";
+import { execFile } from "child_process";
 import path from "path";
 import fs from "fs-extra";
 import { v4 as uuid } from "uuid";
@@ -15,19 +15,25 @@ export async function compressPDF(file, level) {
 
   const quality = qualityMap[level] || "/ebook";
 
-  const command = `
-    gs -sDEVICE=pdfwrite \
-       -dCompatibilityLevel=1.4 \
-       -dPDFSETTINGS=${quality} \
-       -dNOPAUSE -dQUIET -dBATCH \
-       -sOutputFile=${outputPath} \
-       ${inputPath}
-  `;
+  const args = [
+    "-sDEVICE=pdfwrite",
+    "-dCompatibilityLevel=1.4",
+    `-dPDFSETTINGS=${quality}`,
+    "-dNOPAUSE",
+    "-dQUIET",
+    "-dBATCH",
+    `-sOutputFile=${outputPath}`,
+    inputPath,
+  ];
 
   await new Promise((resolve, reject) => {
-    exec(command, (err) => {
-      if (err) reject(err);
-      else resolve();
+    execFile("gs", args, (err, stdout, stderr) => {
+      if (err) {
+        // attach stderr for better debugging
+        err.message = `${err.message}\n${stderr || stdout || ""}`;
+        return reject(err);
+      }
+      resolve();
     });
   });
 

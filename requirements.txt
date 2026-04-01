@@ -1,0 +1,7 @@
+pdf2docx
+pdf2image
+pandas
+tabula-py
+openpyxl
+python-pptx
+Pillow
