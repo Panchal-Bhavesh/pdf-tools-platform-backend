@@ -13,8 +13,9 @@ export const unlockPdf = async (pdfBuffer, password, outputPath) => {
     const tempPdfPath = path.join(tempDir, `${uuidv4()}.pdf`);
     fs.writeFileSync(tempPdfPath, pdfBuffer);
 
+    const pythonBin = process.env.PYTHON_BIN || "python3";
     const pythonProcess = spawn(
-      path.join(process.cwd(), "venv", "bin", "python3"),
+      pythonBin,
       ["unlock_pdf.py", tempPdfPath, outputPath, password],
       { cwd: process.cwd() },
     );

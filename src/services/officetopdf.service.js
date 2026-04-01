@@ -13,8 +13,9 @@ export const convertOfficeToPdf = async (fileBuffer, ext, outputPath) => {
     const tempInputPath = path.join(tempDir, `${uuidv4()}.${ext}`);
     fs.writeFileSync(tempInputPath, fileBuffer);
 
+    const pythonBin = process.env.PYTHON_BIN || "python3";
     const pythonProcess = spawn(
-      path.join(process.cwd(), "venv", "bin", "python3"),
+      pythonBin,
       ["office2pdf_convert.py", tempInputPath, outputPath],
       { cwd: process.cwd() },
     );
@@ -58,10 +59,16 @@ export const convertOfficeToPdf = async (fileBuffer, ext, outputPath) => {
       pythonProcess.on("error", (err) => {
         clearTimeout(timeout);
         if (fs.existsSync(tempInputPath)) fs.unlinkSync(tempInputPath);
-        reject(new Error(`${ext.toUpperCase()} to PDF conversion failed: ${err.message}`));
+        reject(
+          new Error(
+            `${ext.toUpperCase()} to PDF conversion failed: ${err.message}`,
+          ),
+        );
       });
     });
   } catch (err) {
-    throw new Error(`${ext.toUpperCase()} to PDF conversion failed: ${err.message}`);
+    throw new Error(
+      `${ext.toUpperCase()} to PDF conversion failed: ${err.message}`,
+    );
   }
 };

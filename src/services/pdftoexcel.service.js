@@ -15,12 +15,11 @@ export const convertPdfToExcel = async (pdfBuffer, outputPath) => {
 
     // Call the Python script for PDF to Excel conversion
     // Note: This assumes you have a pdf2excel_convert.py script
+    const pythonBin = process.env.PYTHON_BIN || "python3";
     const pythonProcess = spawn(
-      path.join(process.cwd(), "venv", "bin", "python3"),
+      pythonBin,
       ["pdf2excel_convert.py", tempPdfPath, outputPath],
-      {
-        cwd: process.cwd(),
-      },
+      { cwd: process.cwd() },
     );
 
     let stdout = "";

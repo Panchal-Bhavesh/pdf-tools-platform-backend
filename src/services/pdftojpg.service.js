@@ -12,8 +12,9 @@ export const convertPdfToJpg = async (pdfBuffer, outputPath) => {
     const tempPdfPath = path.join(tempDir, `${uuidv4()}.pdf`);
     fs.writeFileSync(tempPdfPath, pdfBuffer);
 
+    const pythonBin = process.env.PYTHON_BIN || "python3";
     const pythonProcess = spawn(
-      path.join(process.cwd(), "venv", "bin", "python3"),
+      pythonBin,
       ["pdf2jpg_convert.py", tempPdfPath, outputPath],
       { cwd: process.cwd() },
     );

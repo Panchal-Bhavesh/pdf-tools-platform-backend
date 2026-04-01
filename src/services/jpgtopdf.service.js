@@ -17,8 +17,9 @@ export const convertJpgToPdf = async (imageBuffers, outputPath) => {
       return tempPath;
     });
 
+    const pythonBin = process.env.PYTHON_BIN || "python3";
     const pythonProcess = spawn(
-      path.join(process.cwd(), "venv", "bin", "python3"),
+      pythonBin,
       ["jpg2pdf_convert.py", outputPath, ...tempImagePaths],
       { cwd: process.cwd() },
     );
@@ -37,13 +38,17 @@ export const convertJpgToPdf = async (imageBuffers, outputPath) => {
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
         pythonProcess.kill("SIGKILL");
-        tempImagePaths.forEach((p) => { if (fs.existsSync(p)) fs.unlinkSync(p); });
+        tempImagePaths.forEach((p) => {
+          if (fs.existsSync(p)) fs.unlinkSync(p);
+        });
         reject(new Error("JPG to PDF conversion timed out"));
       }, 120000);
 
       pythonProcess.on("close", (code) => {
         clearTimeout(timeout);
-        tempImagePaths.forEach((p) => { if (fs.existsSync(p)) fs.unlinkSync(p); });
+        tempImagePaths.forEach((p) => {
+          if (fs.existsSync(p)) fs.unlinkSync(p);
+        });
 
         if (code === 0) {
           resolve(outputPath);
@@ -61,7 +66,9 @@ export const convertJpgToPdf = async (imageBuffers, outputPath) => {
 
       pythonProcess.on("error", (err) => {
         clearTimeout(timeout);
-        tempImagePaths.forEach((p) => { if (fs.existsSync(p)) fs.unlinkSync(p); });
+        tempImagePaths.forEach((p) => {
+          if (fs.existsSync(p)) fs.unlinkSync(p);
+        });
         reject(new Error("JPG to PDF conversion failed: " + err.message));
       });
     });

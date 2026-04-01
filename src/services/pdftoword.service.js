@@ -14,8 +14,9 @@ export const convertPdfToWord = async (pdfBuffer, outputPath) => {
     fs.writeFileSync(tempPdfPath, pdfBuffer);
 
     // Call the Python script
+    const pythonBin = process.env.PYTHON_BIN || "python3";
     const pythonProcess = spawn(
-      path.join(process.cwd(), "venv", "bin", "python3"),
+      pythonBin,
       ["pdf2docx_convert.py", tempPdfPath, outputPath],
       {
         cwd: process.cwd(),
