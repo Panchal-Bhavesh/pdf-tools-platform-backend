@@ -2,28 +2,15 @@ import express from "express";
 import cors from "cors";
 import multer from "multer";
 import pdfRoutes from "./routes/pdf.routes.js";
+import { feedbackController } from "./controllers/feedback.controller.js";
 
 const app = express();
 
-// Frontend origin for CORS (set this in your .env or Vercel environment)
 const FRONTEND_URL = process.env.FRONTEND_URL || "https://pagelypdf.vercel.app";
 
-// CORS configuration - allow all origins for development
-// The cors() middleware automatically handles OPTIONS preflight requests
 app.use(
   cors({
-    origin: (origin, callback) => {
-      if (!origin) return callback(null, true); // allow mobile apps / curl
-
-      const allowedOrigins = ["https://pagelypdf.vercel.app", FRONTEND_URL];
-
-      // Use the exact origin string (not `true`) to avoid trailing-slash mismatch
-      if (allowedOrigins.includes(origin)) {
-        callback(null, origin);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
+    origin: true, // reflect the request origin — allows all origins
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "Content-Disposition"],
     exposedHeaders: [
@@ -32,6 +19,7 @@ app.use(
       "X-Original-Size",
       "X-Compressed-Size",
     ],
+    credentials: false,
   }),
 );
 
@@ -58,13 +46,15 @@ app.get("/api/pdf/test", (req, res) => {
 });
 
 app.use("/api/pdf", pdfRoutes);
+app.post("/api/feedback", feedbackController);
 
 // Error handling middleware (must be after routes)
 app.use((err, req, res, next) => {
   console.error("Error:", err);
 
   // Set CORS headers on error responses
-  res.setHeader("Access-Control-Allow-Origin", FRONTEND_URL);
+  const reqOrigin = req.headers.origin || FRONTEND_URL;
+  res.setHeader("Access-Control-Allow-Origin", reqOrigin);
   res.setHeader(
     "Access-Control-Allow-Methods",
     "GET, POST, PUT, DELETE, OPTIONS",
